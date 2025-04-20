@@ -240,7 +240,7 @@ void game(){
 
         case SHOW_RESULT: {
             static bool displayed = false;
-            beep(BUZZER_A, 400);
+            
             if (!displayed) {
                 ssd1306_fill(&ssd, false);
                 if (player_one_score == 3 || player_two_score == 3) {
@@ -252,7 +252,7 @@ void game(){
                     ssd1306_draw_string(&ssd, win_msg, 2, 10);
                     ssd1306_draw_string(&ssd, "PRESS O JOYSTICK PARA REINICIAR", 2, 30);
                 } else {
-                    
+                    beep(BUZZER_A, 400);
                     char msg[32];
                     sprintf(msg, "PONTO DO J%d", winner);
                    
