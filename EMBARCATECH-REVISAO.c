@@ -5,9 +5,7 @@
 #include "hardware/pwm.h"
 #include "libs/ssd1306.h"
 #include "libs/definicoes.h"
-#include "libs/matriz_leds.h"
 #include "libs/pio_config.h"
-
 
 static volatile uint32_t last_time = 0;
 static volatile bool game_is_active = false;
@@ -37,7 +35,7 @@ void game();
 void set_rgb(bool r, bool g, bool b);
 void pwm_init_buzzer(uint pin);
 void beep(uint pin, uint duration_ms);
-
+void update_matrix_color();
 
 int main() {
     stdio_init_all();
@@ -52,9 +50,7 @@ int main() {
     initialize_gpio(LED_GREEN, GPIO_OUT);
     initialize_gpio(LED_BLUE, GPIO_OUT);
     initialize_gpio(LED_RED, GPIO_OUT);
-    //initialize_gpio(BUZZER_A, GPIO_OUT);
     pwm_init_buzzer(BUZZER_A);
-
 
     i2c_init(I2C_PORT, 400 * 1000);
     gpio_set_function(I2C_SDA, GPIO_FUNC_I2C);
@@ -68,7 +64,6 @@ int main() {
 
     np_init(MATRIZ_LEDS);
     np_clear();
-    
 
     ssd1306_init(&ssd, WIDTH, HEIGHT, false, ADRESS, I2C_PORT);
     ssd1306_config(&ssd);
@@ -76,13 +71,35 @@ int main() {
 
     while (true) {
         if (!game_is_active) {
-            move_square();  // Enquanto o jogo não começou, permite mover o quadrado
+            move_square();
+            update_matrix_color();
         } else {
+            np_clear();
             game();
         }
     }
 }
 
+void update_matrix_color() {
+    adc_select_input(1);
+    uint16_t vrx = adc_read();
+    sleep_us(10);
+
+    adc_select_input(0);
+    uint16_t vry = adc_read();
+    sleep_us(10);
+
+    // Converte valores do joystick para faixas de cor RGB (0 a 255)
+    uint8_t r = (vrx * 20) / 4095;
+    uint8_t g = (vry * 20) / 4095;
+    uint8_t b = 20 - ((vrx + vry) / 2 * 20 / 4095);
+
+    bool buffer[25];
+    for (int i = 0; i < 25; i++) buffer[i] = true; // todos os LEDs acesos
+
+    np_set_leds(buffer, r, g, b);
+    sleep_ms(100);
+}
 // Interrupções
 static void gpio_irq_handler(uint gpio, uint32_t events) {
     uint32_t current_time = to_us_since_boot(get_absolute_time());
