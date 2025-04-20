@@ -19,6 +19,7 @@ absolute_time_t result_display_start;
 bool reaction_received = false;
 uint8_t winner = 0;
 bool game_over = false;
+bool displayed = false;
 
 ssd1306_t ssd;
 
@@ -168,6 +169,7 @@ void start_countdown() {
     ssd1306_draw_string(&ssd, "PREPARAR", 20, 25);
     ssd1306_send_data(&ssd);
     reaction_received = false;
+    displayed = false;
     winner = 0;
 }
 
@@ -239,14 +241,14 @@ void game(){
             break;
 
         case SHOW_RESULT: {
-            static bool displayed = false;
+            //static bool displayed = false;
             
             if (!displayed) {
                 ssd1306_fill(&ssd, false);
                 if (player_one_score == 3 || player_two_score == 3) {
                     set_rgb(true, true, true); // Branco (vencedor)
                     game_over = true;
-
+                    displayed = true;
                     char win_msg[32];
                     sprintf(win_msg, "J%d VENCEU", (player_one_score == 3) ? 1 : 2);
                     ssd1306_draw_string(&ssd, win_msg, 2, 10);

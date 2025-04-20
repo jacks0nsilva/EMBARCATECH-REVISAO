@@ -40,7 +40,6 @@ target_link_libraries(${PROJECT_NAME}
         hardware_adc
         hardware_pwm
         hardware_pio
-        hardware_rtc
         )
 
 pico_enable_stdio_usb(${PROJECT_NAME} 1)
