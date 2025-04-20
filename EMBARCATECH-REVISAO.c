@@ -225,6 +225,7 @@ void game(){
             if (remaining > 0) {
                 char msg[20];
                 sprintf(msg, "INICIANDO EM %d", remaining / 1000 + 1);
+                printf("INICIANDO EM %d\n", remaining / 1000 + 1);
                 ssd1306_draw_string(&ssd, msg, 10, 25);
             } else {
                 current_state = WAIT_FOR_REACTION;
@@ -251,18 +252,23 @@ void game(){
                     displayed = true;
                     char win_msg[32];
                     sprintf(win_msg, "J%d VENCEU", (player_one_score == 3) ? 1 : 2);
+                    printf("J%d VENCEU\n", (player_one_score == 3) ? 1 : 2);
+
                     ssd1306_draw_string(&ssd, win_msg, 2, 10);
                     ssd1306_draw_string(&ssd, "PRESS O JOYSTICK PARA REINICIAR", 2, 30);
+                    printf("PRESSIONE O JOYSTICK PARA REINICIAR\n");
                 } else {
                     beep(BUZZER_A, 400);
                     char msg[32];
                     sprintf(msg, "PONTO DO J%d", winner);
-                   
+                    printf("PONTO DO JOGADOR %d\n", winner);
+
                     ssd1306_draw_string(&ssd, msg, 2, 10);
 
                     char score[32];
                     sprintf(score, "J1: %d  J2: %d", player_one_score, player_two_score);
                     ssd1306_draw_string(&ssd, score, 2, 30);
+                    printf("JOGADOR 1: %d  JOGADOR 2: %d\n", player_one_score, player_two_score);
 
                     ssd1306_draw_string(&ssd, "PROX RODADA", 2, 50);
                 }
