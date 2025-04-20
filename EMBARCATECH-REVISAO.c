@@ -7,36 +7,33 @@
 #include "libs/definicoes.h"
 #include "libs/pio_config.h"
 
-static volatile uint32_t last_time = 0;
-static volatile bool game_is_active = false;
-static volatile int player_one_score = 0;
-static volatile int player_two_score = 0;
+static volatile uint32_t last_time = 0; // Variável para armazenar o tempo da última interrupção
+static volatile bool game_is_active = false; // Estado do jogo
+static volatile int player_one_score = 0; // Pontuação do jogador 1
+static volatile int player_two_score = 0; // Pontuação do jogador 2
+static volatile GameState current_state = WAITING_START; // Estado atual do jogo
+absolute_time_t countdown_start_time; // Tempo de início da contagem
+absolute_time_t result_display_start; // Tempo de início da exibição do resultado
+bool reaction_received = false; // Indica se a reação foi recebida
+uint8_t winner = 0; // Jogador vencedor
+bool game_over = false; // Indica se o jogo acabou
+bool displayed = false; // Indica se o resultado foi exibido
+ssd1306_t ssd; // Estrutura para o display OLED
 
-static volatile GameState current_state = WAITING_START;
-absolute_time_t countdown_start_time;
-absolute_time_t result_display_start;
-
-bool reaction_received = false;
-uint8_t winner = 0;
-bool game_over = false;
-bool displayed = false;
-
-ssd1306_t ssd;
-
-// Posição do quadrado (opcional, caso mantenha o modo joystick)
+// Posição do quadrado 
 uint8_t square_x = 60;
 uint8_t square_y = 28;
 
-// Declarações de funções
-void initialize_gpio(int pin, bool direction);
-void move_square();
-void start_countdown();
-static void gpio_irq_handler(uint gpio, uint32_t events);
-void game();
-void set_rgb(bool r, bool g, bool b);
-void pwm_init_buzzer(uint pin);
-void beep(uint pin, uint duration_ms);
-void update_matrix_color();
+// Declarações de funções 
+void initialize_gpio(int pin, bool direction); // Inicialização do GPIO
+void move_square(); // Movimento do quadrado via joystick
+void start_countdown(); // Início da contagem regressiva
+static void gpio_irq_handler(uint gpio, uint32_t events); // Manipula interrupção GPIO
+void game(); // Função principal do jogo
+void set_rgb(bool r, bool g, bool b); // Configura LEDs RGB
+void pwm_init_buzzer(uint pin); // Inicializa o buzzer
+void beep(uint pin, uint duration_ms); // Emissão de sinal PWM (beep)
+void update_matrix_color(); // Atualiza a cor da matriz de LEDs de acordo com o joystick
 
 int main() {
     stdio_init_all();
@@ -81,27 +78,7 @@ int main() {
     }
 }
 
-void update_matrix_color() {
-    adc_select_input(1);
-    uint16_t vrx = adc_read();
-    sleep_us(10);
-
-    adc_select_input(0);
-    uint16_t vry = adc_read();
-    sleep_us(10);
-
-    // Converte valores do joystick para faixas de cor RGB (0 a 255)
-    uint8_t r = (vrx * 20) / 4095;
-    uint8_t g = (vry * 20) / 4095;
-    uint8_t b = 20 - ((vrx + vry) / 2 * 20 / 4095);
-
-    bool buffer[25];
-    for (int i = 0; i < 25; i++) buffer[i] = true; // todos os LEDs acesos
-
-    np_set_leds(buffer, r, g, b);
-    sleep_ms(100);
-}
-// Interrupções
+// Função para tratar as interrupções do GPIO
 static void gpio_irq_handler(uint gpio, uint32_t events) {
     uint32_t current_time = to_us_since_boot(get_absolute_time());
 
@@ -162,56 +139,7 @@ static void gpio_irq_handler(uint gpio, uint32_t events) {
     }
 }
 
-void start_countdown() {
-    current_state = COUNTDOWN;
-    countdown_start_time = get_absolute_time();
-    ssd1306_fill(&ssd, false);
-    ssd1306_draw_string(&ssd, "PREPARAR", 20, 25);
-    ssd1306_send_data(&ssd);
-    reaction_received = false;
-    displayed = false;
-    winner = 0;
-}
-
-// Inicialização dos GPIOs
-void initialize_gpio(int pin, bool direction) {
-    gpio_init(pin);
-    gpio_set_dir(pin, direction);
-    if(direction == GPIO_IN){
-        gpio_pull_up(pin);
-    } else {
-        gpio_put(pin, 0);
-    }
-}
-
-// Movimento do quadrado via joystick (opcional)
-void move_square() {
-
-    set_rgb(false, false, false);
-    adc_select_input(1);
-    uint16_t vrx = adc_read();
-    sleep_us(10);
-
-    adc_select_input(0);
-    uint16_t vry = adc_read();
-    sleep_us(10);
-
-    int8_t dx = 0, dy = 0;
-
-    if (vrx < 1400) dx = -4;
-    if (vrx > 2700) dx = 4;
-    if (vry < 1400) dy = 4;
-    if (vry > 2700) dy = -4;
-
-    square_x = (square_x + dx >= 2 && square_x + dx <= 116) ? square_x + dx : square_x;
-    square_y = (square_y + dy >= 2 && square_y + dy <= 52) ? square_y + dy : square_y;
-
-    ssd1306_fill(&ssd, false);
-    ssd1306_rect(&ssd, 0, 0, 128, 64, true, false);
-    ssd1306_rect(&ssd, square_y, square_x, 8, 8, true, true);
-    ssd1306_send_data(&ssd);
-}
-
+// Função principal do jogo
 void game(){
     absolute_time_t now = get_absolute_time();
 
@@ -242,8 +170,6 @@ void game(){
             break;
 
         case SHOW_RESULT: {
-            //static bool displayed = false;
-            
             if (!displayed) {
                 ssd1306_fill(&ssd, false);
                 if (player_one_score == 3 || player_two_score == 3) {
@@ -291,12 +217,42 @@ void game(){
     }
 }
 
+// Movimento do quadrado via joystick 
+void move_square() {
+
+    set_rgb(false, false, false);
+    adc_select_input(1);
+    uint16_t vrx = adc_read();
+    sleep_us(10);
+
+    adc_select_input(0);
+    uint16_t vry = adc_read();
+    sleep_us(10);
+
+    int8_t dx = 0, dy = 0;
+
+    if (vrx < 1400) dx = -4;
+    if (vrx > 2700) dx = 4;
+    if (vry < 1400) dy = 4;
+    if (vry > 2700) dy = -4;
+
+    square_x = (square_x + dx >= 2 && square_x + dx <= 116) ? square_x + dx : square_x;
+    square_y = (square_y + dy >= 2 && square_y + dy <= 52) ? square_y + dy : square_y;
+
+    ssd1306_fill(&ssd, false);
+    ssd1306_rect(&ssd, 0, 0, 128, 64, true, false);
+    ssd1306_rect(&ssd, square_y, square_x, 8, 8, true, true);
+    ssd1306_send_data(&ssd);
+}
+
+// Função para configurar a cor do LED RGB
 void set_rgb(bool r, bool g, bool b) {
     gpio_put(LED_RED, r);
     gpio_put(LED_GREEN, g);
     gpio_put(LED_BLUE, b);
 }
 
+// Função para inicializar o buzzer PWM
 void pwm_init_buzzer(uint pin) {
     gpio_set_function(pin, GPIO_FUNC_PWM);
     uint slice_num = pwm_gpio_to_slice_num(pin);
@@ -314,3 +270,47 @@ void beep(uint pin, uint duration_ms) {
     pwm_set_gpio_level(pin, 0);    // Desativa o PWM
 }
 
+// Função para atualizar a matriz de LEDs com base nos valores do joystick
+void update_matrix_color() {
+    adc_select_input(1);
+    uint16_t vrx = adc_read();
+    sleep_us(10);
+
+    adc_select_input(0);
+    uint16_t vry = adc_read();
+    sleep_us(10);
+
+    // Converte valores do joystick para faixas de cor RGB (0 a 255)
+    uint8_t r = (vrx * 20) / 4095;
+    uint8_t g = (vry * 20) / 4095;
+    uint8_t b = 20 - ((vrx + vry) / 2 * 20 / 4095);
+
+    bool buffer[25];
+    for (int i = 0; i < 25; i++) buffer[i] = true; // todos os LEDs acesos
+
+    np_set_leds(buffer, r, g, b);
+    sleep_ms(100);
+}
+
+// Função para iniciar a contagem regressiva do jogo
+void start_countdown() {
+    current_state = COUNTDOWN;
+    countdown_start_time = get_absolute_time();
+    ssd1306_fill(&ssd, false);
+    ssd1306_draw_string(&ssd, "PREPARAR", 20, 25);
+    ssd1306_send_data(&ssd);
+    reaction_received = false;
+    displayed = false;
+    winner = 0;
+}
+
+// Inicialização dos GPIOs
+void initialize_gpio(int pin, bool direction) {
+    gpio_init(pin);
+    gpio_set_dir(pin, direction);
+    if(direction == GPIO_IN){
+        gpio_pull_up(pin);
+    } else {
+        gpio_put(pin, 0);
+    }
+}
