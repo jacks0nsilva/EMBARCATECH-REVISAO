@@ -158,6 +158,7 @@ void game(){
             } else {
                 current_state = WAIT_FOR_REACTION;
                 ssd1306_draw_string(&ssd, "VAI", 10, 25);
+                printf("VAI!\n");
             }
             ssd1306_send_data(&ssd);
             sleep_ms(100);
@@ -231,10 +232,10 @@ void move_square() {
 
     int8_t dx = 0, dy = 0;
 
-    if (vrx < 1400) dx = -4;
-    if (vrx > 2700) dx = 4;
-    if (vry < 1400) dy = 4;
-    if (vry > 2700) dy = -4;
+    if (vrx < 1400) dx = -8;
+    if (vrx > 2700) dx = 8;
+    if (vry < 1400) dy = 8;
+    if (vry > 2700) dy = -8;
 
     square_x = (square_x + dx >= 2 && square_x + dx <= 116) ? square_x + dx : square_x;
     square_y = (square_y + dy >= 2 && square_y + dy <= 52) ? square_y + dy : square_y;
@@ -281,9 +282,9 @@ void update_matrix_color() {
     sleep_us(10);
 
     // Converte valores do joystick para faixas de cor RGB (0 a 255)
-    uint8_t r = (vrx * 20) / 4095;
-    uint8_t g = (vry * 20) / 4095;
-    uint8_t b = 20 - ((vrx + vry) / 2 * 20 / 4095);
+    uint8_t r = (vrx * 10) / 4095;
+    uint8_t g = (vry * 10) / 4095;
+    uint8_t b = 10 - ((vrx + vry) / 2 * 10 / 4095);
 
     bool buffer[25];
     for (int i = 0; i < 25; i++) buffer[i] = true; // todos os LEDs acesos
